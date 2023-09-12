@@ -677,10 +677,28 @@ static int secp256k1_bulletproof_inner_product_real_prove_impl(const secp256k1_e
             secp256k1_scalar_add(&pfdata.g_sc, &pfdata.g_sc, &prod);
         }
         secp256k1_scalar_mul(&pfdata.g_sc, &pfdata.g_sc, ux);
+        
+        int k;
+        unsigned char buf[32] = {0};
+        
+        printf("\nux = ");
+        secp256k1_scalar_get_b32(buf, &ux);
+        for(k=0; k<32; k++) printf("%02x", buf[k]);
+        
+        printf("\ngSc(L) = ");
+        secp256k1_scalar_get_b32(buf, &pfdata.g_sc);
+        for(k=0; k<32; k++) printf("%02x", buf[k]);
 
         secp256k1_scalar_set_int(&pfdata.yinvn, 1);
         secp256k1_ecmult_multi_var(ecmult_ctx, scratch, &tmplj, NULL, &secp256k1_bulletproof_innerproduct_pf_ecmult_callback_l, (void *) &pfdata, n + 1);
         secp256k1_ge_set_gej(&out_pt[(*pt_idx)++], &tmplj);
+        
+        secp256k1_fe p;
+        printf("\nL = ");
+        p = out_pt[*pt_idx - 1].x;
+        secp256k1_fe_normalize(&p);
+        secp256k1_fe_get_b32(buf, &p);
+        for(k=0; k<32; k++) printf("%02x", buf[k]);
 
         /* R */
         secp256k1_scalar_clear(&pfdata.g_sc);
@@ -690,10 +708,20 @@ static int secp256k1_bulletproof_inner_product_real_prove_impl(const secp256k1_e
             secp256k1_scalar_add(&pfdata.g_sc, &pfdata.g_sc, &prod);
         }
         secp256k1_scalar_mul(&pfdata.g_sc, &pfdata.g_sc, ux);
+        
+        printf("\ngSc(R) = ");
+        secp256k1_scalar_get_b32(buf, &pfdata.g_sc);
+        for(k=0; k<32; k++) printf("%02x", buf[k]);
 
         secp256k1_scalar_set_int(&pfdata.yinvn, 1);
         secp256k1_ecmult_multi_var(ecmult_ctx, scratch, &tmprj, NULL, &secp256k1_bulletproof_innerproduct_pf_ecmult_callback_r, (void *) &pfdata, n + 1);
         secp256k1_ge_set_gej(&out_pt[(*pt_idx)++], &tmprj);
+        
+        printf("\nR = ");
+        p = out_pt[*pt_idx - 1].x;
+        secp256k1_fe_normalize(&p);
+        secp256k1_fe_get_b32(buf, &p);
+        for(k=0; k<32; k++) printf("%02x", buf[k]);
 
         /* x, x^2, x^-1, x^-2 */
         secp256k1_bulletproof_update_commit(commit, &out_pt[*pt_idx - 2], &out_pt[*pt_idx] - 1);
@@ -702,6 +730,9 @@ static int secp256k1_bulletproof_inner_product_real_prove_impl(const secp256k1_e
             return 0;
         }
         secp256k1_scalar_inverse_var(&pfdata.xinv[i], &pfdata.x[i]);
+        
+        printf("\ncommit(after updateing with R and L) = ");
+        for(k=0; k<32; k++) printf("%02x", commit[k]);
 
         /* update scalar array */
         for (j = 0; j < halfwidth; j++) {

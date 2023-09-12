@@ -53,10 +53,21 @@ secp256k1_bulletproof_generators *secp256k1_bulletproof_generators_create(const 
     secp256k1_fe_get_b32(&seed[32], &secp256k1_ge_const_g.y);
 
     secp256k1_rfc6979_hmac_sha256_initialize(&rng, seed, 64);
+    /*
+    printf("Seed:\n");
+    int j;
+    for(j=0; j<64; j++) printf("%02x", seed[j]);
+    printf("\nKeys:\n");
+    */
     for (i = 0; i < n; i++) {
         unsigned char tmp[32] = { 0 };
         secp256k1_generator gen;
         secp256k1_rfc6979_hmac_sha256_generate(&rng, tmp, 32);
+        /*
+        int j;
+        for(j=0; j<32; j++) printf("%02x", tmp[j]);
+        printf("\n");
+        */
         CHECK(secp256k1_generator_generate(ctx, &gen, tmp));
         secp256k1_generator_load(&ret->gens[i], &gen);
 
@@ -244,7 +255,7 @@ int secp256k1_bulletproof_rangeproof_prove(
             /* Calculate commitment from blinding factor */
             secp256k1_gej commitj;
             secp256k1_pedersen_ecmult(&commitj, &blinds[i], value[i], &value_genp, &gens->blinding_gen[0]);
-            secp256k1_ge_set_gej(&commitp[i], &commitj);
+            secp256k1_ge_set_gej(&commitp[i], &commitj);            
         }
         else {
             /* Multi-party bulletproof: total blinding factor unknown. Input commitment(s) */

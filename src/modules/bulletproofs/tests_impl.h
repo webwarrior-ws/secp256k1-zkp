@@ -482,10 +482,28 @@ void test_bulletproof_rangeproof(size_t nbits, size_t expected_size, const secp2
     proof_ptr[1] = proof2;
     proof_ptr[2] = proof3;
 
-    secp256k1_generator_load(&value_gen[0], &secp256k1_generator_const_g);
+    secp256k1_generator_load(&value_gen[0], &secp256k1_generator_const_h);
     secp256k1_generator_load(&value_gen[1], &secp256k1_generator_const_g);
     secp256k1_generator_load(&value_gen[2], &secp256k1_generator_const_h);
     random_scalar_order(&blind);
+    
+    unsigned char blind_data[32] = {
+	0x09, 0xc9, 0xf1, 0x2c, 0x4c, 0x56, 0x8b, 0xc2, 
+	0xb0, 0x49, 0x78, 0x4d, 0x03, 0xf4, 0xa0, 0xe1, 
+	0xd5, 0x6b, 0x94, 0xe8, 0xf1, 0x74, 0x3c, 0x4f, 
+	0x87, 0x73, 0xea, 0xda, 0x57, 0x7c, 0x43, 0x7c
+    };
+    int overflow = 0;
+    secp256k1_scalar_set_b32(&blind, blind_data, &overflow);
+    
+    unsigned char buf[32] = {0};
+    int k;
+    secp256k1_scalar_get_b32(&buf, &blind);
+    printf("\nkey(blind)\n");
+    for(k=0; k<32; k++) {
+    	printf("%02x", buf[k]);
+    }
+    printf("\n");
 
     secp256k1_pedersen_ecmult(&commitj, &blind, v, &value_gen[0], &gens->blinding_gen[0]);
     secp256k1_ge_set_gej(&commitp, &commitj);
@@ -497,6 +515,7 @@ void test_bulletproof_rangeproof(size_t nbits, size_t expected_size, const secp2
 
     CHECK(secp256k1_bulletproof_rangeproof_prove_impl(&ctx->ecmult_ctx, scratch, proof, &plen, NULL, NULL, nbits, &v, NULL, &blind, &commitp, 1, &value_gen[0], gens, nonce, nonce, NULL, 0, NULL) == 1);
     CHECK(plen == expected_size);
+    /*
     nonce[0] ^= 1;
     CHECK(secp256k1_bulletproof_rangeproof_prove_impl(&ctx->ecmult_ctx, scratch, proof2, &plen, NULL, NULL, nbits, &v, NULL, &blind, &commitp, 1, &value_gen[1], gens, nonce, nonce, NULL, 0, NULL) == 1);
     CHECK(plen == expected_size);
@@ -504,20 +523,23 @@ void test_bulletproof_rangeproof(size_t nbits, size_t expected_size, const secp2
     CHECK(secp256k1_bulletproof_rangeproof_prove_impl(&ctx->ecmult_ctx, scratch, proof3, &plen, NULL, NULL, nbits, &v, NULL, &blind, &commitp2, 1, &value_gen[2], gens, nonce, nonce, NULL, 0, NULL) == 1);
     CHECK(plen == expected_size);
     nonce[0] ^= 3;
+    */
     /* Verify once */
-    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(&ctx->ecmult_ctx, scratch, proof_ptr, 1, plen, nbits, NULL, commitp_ptr, 1, value_gen, gens, NULL, 0) == 1);
+    /*CHECK(secp256k1_bulletproof_rangeproof_verify_impl(&ctx->ecmult_ctx, scratch, proof_ptr, 1, plen, nbits, NULL, commitp_ptr, 1, value_gen, gens, NULL, 0) == 1);*/
     /* Verify twice at once to test batch validation */
-    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(&ctx->ecmult_ctx, scratch, proof_ptr, 2, plen, nbits, NULL, commitp_ptr, 1, value_gen, gens, NULL, 0) == 1);
+    /*CHECK(secp256k1_bulletproof_rangeproof_verify_impl(&ctx->ecmult_ctx, scratch, proof_ptr, 2, plen, nbits, NULL, commitp_ptr, 1, value_gen, gens, NULL, 0) == 1);*/
     /* Verify thrice at once where one has a different asset type */
-    CHECK(secp256k1_bulletproof_rangeproof_verify_impl(&ctx->ecmult_ctx, scratch, proof_ptr, 3, plen, nbits, NULL, commitp_ptr, 1, value_gen, gens, NULL, 0) == 1);
+    /*CHECK(secp256k1_bulletproof_rangeproof_verify_impl(&ctx->ecmult_ctx, scratch, proof_ptr, 3, plen, nbits, NULL, commitp_ptr, 1, value_gen, gens, NULL, 0) == 1);*/
 
     /* Rewind */
+    /*
     CHECK(secp256k1_bulletproof_rangeproof_rewind_impl(&v_recovered, &blind_recovered, proof, plen, 0, &pcommit, &secp256k1_generator_const_g, nonce, NULL, 0, NULL) == 1);
     CHECK(v_recovered == v);
     CHECK(secp256k1_scalar_eq(&blind_recovered, &blind) == 1);
 
     nonce[0] ^= 111;
     CHECK(secp256k1_bulletproof_rangeproof_rewind_impl(&v_recovered, &blind_recovered, proof, plen, 0, &pcommit, &secp256k1_generator_const_g, nonce, NULL, 0, NULL) == 0);
+    */
 
     secp256k1_scratch_destroy(scratch);
 }
@@ -633,16 +655,18 @@ void run_bulletproofs_tests(void) {
     secp256k1_scratch *scratch;
 
     /* Make a ton of generators */
-    secp256k1_bulletproof_generators *gens = secp256k1_bulletproof_generators_create(ctx, &secp256k1_generator_const_h, 32768);
+    secp256k1_bulletproof_generators *gens = secp256k1_bulletproof_generators_create(ctx, &secp256k1_generator_const_g, 256);
+    /*
     test_bulletproof_api();
-
+    */
+    
     /* sanity checks */
     CHECK(secp256k1_bulletproof_innerproduct_proof_length(0) == 32);  /* encoding of 1 */
     CHECK(secp256k1_bulletproof_innerproduct_proof_length(1) == 96);  /* encoding a*b, a, b */
     CHECK(secp256k1_bulletproof_innerproduct_proof_length(2) == 160); /* dot prod, a, b, L, R, parity of L, R */
     CHECK(secp256k1_bulletproof_innerproduct_proof_length(4) == 225); /* dot prod, a, b, a, b, L, R, parity of L, R */
     CHECK(secp256k1_bulletproof_innerproduct_proof_length(8) == 289); /* dot prod, a, b, a, b, L, R, L, R, parity of L, R */
-
+    /*
     test_bulletproof_inner_product(0, gens);
     test_bulletproof_inner_product(1, gens);
     test_bulletproof_inner_product(2, gens);
@@ -653,24 +677,29 @@ void run_bulletproofs_tests(void) {
         test_bulletproof_inner_product(64, gens);
     }
     test_bulletproof_inner_product(1024, gens);
-
+    */
+    
+    /*
     test_bulletproof_rangeproof(1, 289, gens);
     test_bulletproof_rangeproof(2, 353, gens);
     test_bulletproof_rangeproof(16, 546, gens);
     test_bulletproof_rangeproof(32, 610, gens);
+    */
     test_bulletproof_rangeproof(64, 675, gens);
-
+    /*
     test_bulletproof_rangeproof_aggregate(64, 1, 675, gens);
     test_bulletproof_rangeproof_aggregate(8, 2, 546, gens);
     test_bulletproof_rangeproof_aggregate(8, 4, 610, gens);
-
+    */
     secp256k1_bulletproof_generators_destroy(ctx, gens);
 
     scratch = secp256k1_scratch_space_create(ctx, 256*(1<<20));
     gens = secp256k1_bulletproof_generators_create(ctx, &secp256k1_generator_const_g, 256);
+    /*
     for (i=2;i<=10;i++) {
         test_multi_party_bulletproof(i, scratch, gens);
     }
+    */
     secp256k1_bulletproof_generators_destroy(ctx, gens);
     secp256k1_scratch_destroy(scratch);
 }

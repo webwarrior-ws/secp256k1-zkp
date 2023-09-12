@@ -508,7 +508,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_sha256_write(&sha256, extra_commit, extra_commit_len);
         secp256k1_sha256_finalize(&sha256, commit);
     }
-
+    
     secp256k1_scalar_chacha20(&alpha, &rho, nonce, 0);
     secp256k1_scalar_chacha20(&tau1, &tau2, private_nonce, 1);
 
@@ -538,10 +538,20 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_scalar_negate(&vals, &vals); /* Negate so it'll be positive in -mu */
         secp256k1_scalar_add(&alpha, &alpha, &vals);
     }
+   
 
     /* Compute A and S */
     secp256k1_ecmult_const(&aj, &gens->blinding_gen[0], &alpha, 256);
     secp256k1_ecmult_const(&sj, &gens->blinding_gen[0], &rho, 256);
+    
+    secp256k1_ge pt;
+    secp256k1_fe *f;
+    
+    secp256k1_ge_set_gej(&pt, &aj);
+    
+    secp256k1_ge_set_gej(&pt, &sj);
+    
+    
     for (i = 0; i < n_commits; i++) {
         for (j = 0; j < nbits; j++) {
             secp256k1_scalar sl, sr;
@@ -577,13 +587,14 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     if (overflow || secp256k1_scalar_is_zero(&y)) {
         return 0;
     }
+    
     secp256k1_bulletproof_update_commit(commit, &out_pt[0], &out_pt[1]); /* TODO rehashing A and S to get a second challenge is overkill */
     secp256k1_scalar_set_b32(&z, commit, &overflow);
     if (overflow || secp256k1_scalar_is_zero(&z)) {
         return 0;
     }
     secp256k1_scalar_sqr(&zsq, &z);
-
+    
     /* Compute coefficients t0, t1, t2 of the <l, r> polynomial */
     /* t0 = l(0) dot r(0) */
     secp256k1_lr_generator_init(&lr_gen, nonce, &y, &z, nbits, value, min_value, n_commits);
@@ -591,10 +602,19 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
     for (i = 0; i < nbits * n_commits; i++) {
         secp256k1_scalar l, r;
         secp256k1_lr_generate(&lr_gen, &l, &r, &zero);
+        /*
+        printf("\nl = "); 
+    	secp256k1_scalar_get_b32(buff, &l);
+    	for(k=0; k<32; k++) printf("%02x", buff[k]);
+    	printf("\nr = "); 
+    	secp256k1_scalar_get_b32(buff, &r);
+    	for(k=0; k<32; k++) printf("%02x", buff[k]);
+    	printf("\n");
+        */
         secp256k1_scalar_mul(&l, &l, &r);
         secp256k1_scalar_add(&t0, &t0, &l);
     }
-
+    
     /* A = t0 + t1 + t2 = l(1) dot r(1) */
     secp256k1_lr_generator_init(&lr_gen, nonce, &y, &z, nbits, value, min_value, n_commits);
     secp256k1_scalar_clear(&t1);
@@ -606,6 +626,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_scalar_mul(&l, &l, &r);
         secp256k1_scalar_add(&t1, &t1, &l);
     }
+   
 
     /* B = t0 - t1 + t2 = l(-1) dot r(-1) */
     secp256k1_lr_generator_init(&lr_gen, nonce, &y, &z, nbits, value, min_value, n_commits);
@@ -656,6 +677,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         secp256k1_gej_add_ge(&tmpj, &tmpj, &tge[1]);
     }
     secp256k1_ge_set_gej(&out_pt[3], &tmpj);
+    
 
     secp256k1_bulletproof_update_commit(commit, &out_pt[2], &out_pt[3]);
     secp256k1_scalar_set_b32(&x, commit, &overflow);
@@ -717,6 +739,7 @@ static int secp256k1_bulletproof_rangeproof_prove_impl(
         return 0;
     }
     *plen += 64 + 128 + 1;
+
 
     return 1;
 }

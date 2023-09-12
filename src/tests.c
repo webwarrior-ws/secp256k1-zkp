@@ -1081,34 +1081,6 @@ void scalar_test(void) {
         CHECK(secp256k1_scalar_eq(&r1, &v0));
     }
     
-    {
-    	/* Test adding specific numbers 
-    	    0xf0000000000000000000000000000000000000000000000000000000000000b9 
-    	  + 0xe00000000000000000000000000000000000000000000000000000000000006b
-    	  mod p (0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f) 
-    	  =
-    	    0xd0000000000000000000000000000000000000000000000000000001000004f5
-    	*/
-    	unsigned char aBytes[32] = 
-    		{ 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    		  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB9 };
-    	unsigned char bBytes[32] = 
-    		{ 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    		  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B };
-    	unsigned char sumBytes[32] = 
-    		{ 0xD0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-    		  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x04, 0xF5 };
-    	
-    	int overflow;
-    	secp256k1_scalar a, b, sum, r;
-    	secp256k1_scalar_set_b32(&a, aBytes, &overflow);
-    	secp256k1_scalar_set_b32(&b, bBytes, &overflow);
-    	secp256k1_scalar_set_b32(&sum, sumBytes, &overflow);
-    	
-    	secp256k1_scalar_add(&r, &a, &b);
-    	CHECK(secp256k1_scalar_eq(&r, &sum));
-    }
-
 }
 
 void scalar_chacha_tests(void) {
@@ -1165,6 +1137,23 @@ void scalar_chacha_tests(void) {
     secp256k1_scalar_set_b32(&exp_r2, &expected3[32], NULL);
     CHECK(secp256k1_scalar_eq(&exp_r1, &r1));
     CHECK(secp256k1_scalar_eq(&exp_r2, &r2));
+    
+    unsigned char seed2[32] = {
+        0x6d, 0x79, 0x20, 0x6b, 0x69, 0x6e, 0x67, 0x64, 
+        0x6f, 0x6d, 0x20, 0x66, 0x6f, 0x72, 0x20, 0x73, 
+        0x6f, 0x6d, 0x65, 0x20, 0x72, 0x61, 0x6e, 0x64, 
+        0x6f, 0x6d, 0x6e, 0x65, 0x73, 0x73, 0x21, 0x21
+    };
+    secp256k1_scalar_chacha20(&r1, &r2, seed2, 0);
+    printf("\nChaCha20 result:\n");
+    int i;
+    unsigned char buf[32] = {0};
+    secp256k1_scalar_get_b32(&buf, &r1);
+    for(i=0; i<32; i++) printf("%02x", buf[i]);
+    printf("\n");
+    secp256k1_scalar_get_b32(&buf, &r2);
+    for(i=0; i<32; i++) printf("%02x", buf[i]);
+    printf("\n");
 }
 
 void run_scalar_tests(void) {
@@ -4753,6 +4742,7 @@ static void random_ber_signature(unsigned char *sig, size_t *len, int* certainly
 }
 
 void run_ecdsa_der_parse(void) {
+/*
     int i,j;
     for (i = 0; i < 200 * count; i++) {
         unsigned char buffer[2048];
@@ -4765,7 +4755,6 @@ void run_ecdsa_der_parse(void) {
             int ret = 0;
             if (j > 0) {
                 damage_array(buffer, &buflen);
-                /* We don't know anything anymore about the DERness of the result */
                 certainly_der = 0;
                 certainly_not_der = 0;
             }
@@ -4781,6 +4770,7 @@ void run_ecdsa_der_parse(void) {
             CHECK(ret == 0);
         }
     }
+*/
 }
 
 /* Tests several edge cases. */

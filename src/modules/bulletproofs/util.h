@@ -129,22 +129,60 @@ SECP256K1_INLINE static int secp256k1_bulletproof_deserialize_point(secp256k1_ge
 }
 
 static void secp256k1_bulletproof_update_commit(unsigned char *commit, const secp256k1_ge *lpt, const secp256k1_ge *rpt) {
-    secp256k1_fe pointx;
+    secp256k1_fe pointx, pointy;
     secp256k1_sha256 sha256;
     unsigned char lrparity;
+    unsigned char pt[32] = {0};
+    /*
+    printf("\nsecp256k1_bulletproof_update_commit\n");
+    int j;
+    */
     lrparity = (!secp256k1_fe_is_quad_var(&lpt->y) << 1) + !secp256k1_fe_is_quad_var(&rpt->y);
     secp256k1_sha256_initialize(&sha256);
     secp256k1_sha256_write(&sha256, commit, 32);
     secp256k1_sha256_write(&sha256, &lrparity, 1);
+    /* 
+    printf("commit = "); 
+    for(j=0; j<32; j++) printf("%02x", commit[j]);
+    */
+    
     pointx = lpt->x;
     secp256k1_fe_normalize(&pointx);
     secp256k1_fe_get_b32(commit, &pointx);
     secp256k1_sha256_write(&sha256, commit, 32);
+    /*
+    printf("\nlpt.x = ");
+    for(j=0; j<32; j++) printf("%02x", commit[j]);
+    */
+    pointy = lpt->y;
+    secp256k1_fe_normalize(&pointy);
+    secp256k1_fe_get_b32(pt, &pointy);
+    /*
+    printf("\nlpt.y = ");
+    for(j=0; j<32; j++) printf("%02x", pt[j]);
+    */
+    
     pointx = rpt->x;
     secp256k1_fe_normalize(&pointx);
     secp256k1_fe_get_b32(commit, &pointx);
     secp256k1_sha256_write(&sha256, commit, 32);
+    /*
+    printf("\nrpt.x = ");
+    for(j=0; j<32; j++) printf("%02x", commit[j]);
+    */
+    pointy = rpt->y;
+    secp256k1_fe_normalize(&pointy);
+    secp256k1_fe_get_b32(pt, &pointy);
+    /*
+    printf("\nrpt.y = ");
+    for(j=0; j<32; j++) printf("%02x", pt[j]);
+    */
+    
     secp256k1_sha256_finalize(&sha256, commit);
+    /*
+    printf("\nresult = ");
+    for(j=0; j<32; j++) printf("%02x", commit[j]);
+    */
 }
 
 #endif
